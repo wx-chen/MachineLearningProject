@@ -1,0 +1,90 @@
+---
+title: "Machine Learning Course Project"
+output: html_document
+---
+
+
+### Summary  
+  
+__Using the Weight Lifting Exercise dataset, we built up a random forest machine learning model to predict type of exercise (classe) based on accelerometer data collected from belt, forearm, arm, and dumbell of 6 participants. The final model makes 100% accurate prediction in the training data and achieves 99.83% accuracy in the testing dataset.__  
+
+### Data Preprocessing  
+  
+The weight lifting exercise dataset is kindly provided by the website [here](http://groupware.les.inf.puc-rio.br/har). Dataset used for this report can be downloaded [here](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv).  
+
+The following preprocessing is done:  
+
+**1. Remove new\_window="yes" entries**  
+For the new\_window variable, 19216 out of 19622 entries are marked "no" (97.93%) while only 406 marked "yes" (2.07%). The "yes" entries have values in variables like "kurtosis\_roll\_belt", "skewness\_roll\_belt" etc while the "no" entries have none. The "yes" or "no" entries do not correlate with exercise class (variable "classe"). Therefore, all entires with a "yes" value are removed from the dataset. Furthermore, the new\_window variable is removed from the dataset.  
+
+**2. Remove missing data**  
+Variables with more than half non-entry data were removed from the dataset, such as kurtosis\_roll\_belt, skewness\_roll\_belt etc.  
+
+**3. Remove identity and time information**  
+As personal identity and timestamp information is not correlated with exercise class, variables 1-5 are removed from the dataset.  
+
+**4. Data slicing**  
+The preprocessed data is saved into a variable called "trainnarrow". Using the caret and kernlab package, the dataset is sliced into a training dataset and testing dataset with the following commands:
+```{r, echo=TRUE, eval=FALSE}
+set.seed(1)
+inTrain <- createDataPartition(trainnarrow$classe,
+                               p=0.7, list=FALSE)
+training <- trainnarrow[inTrain,]
+testing <- trainnarrow[-inTrain,]
+```
+
+  
+### Model Building and Error Evaluation  
+  
+As we want to make predictions to a class variable, a random forest model is selected for machine learning with train control commands to speed up the process:  
+```{r, echo=TRUE, eval=FALSE}
+modrf <- train(classe~., data=training, method="rf",
+               trControl=trainControl(method = "cv", number = 4, allowParallel = TRUE,verboseIter = TRUE))
+
+```
+
+#### In sample error:  
+Based on this model, we can calculate the in-sample error:
+```{r, echo=TRUE, eval=FALSE}
+prederr <- predict(modrf,training)
+table(prederr,training$classe)
+```
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+InEr <- matrix(c(3830,0,0,0,0,0,2603,0,0,0,0,0,2347,0,0,0,0,0,2203,0,0,0,0,0,2470),ncol=5,byrow=FALSE)
+colnames(InEr) <- c("A","B","C","D","E")
+rownames(InEr) <- c("A","B","C","D","E")
+InEr <- as.table(InEr)
+library(pander)
+pandoc.table(InEr)
+```
+   
+Therefore we make a 100% accurate prediction in the training dataset, or 0% in-sample error rate.  
+
+#### Out of sample error:  
+The out of sample error rate is predicted to be higher than the in-sample error rate, due to the over-fitting problem in building the training model. Let's calculate the out of sample error using the testing dataset:    
+
+```{r, echo=TRUE, eval=FALSE}
+pred <- predict(modrf,testing)
+table(pred,testing$classe)
+```
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+OutEr <- matrix(c(1641,0,0,0,0,2,1112,1,0,0,0,3,1002,0,0,0,0,2,942,0,0,0,0,2,1056),ncol=5,byrow=FALSE)
+colnames(OutEr) <- c("A","B","C","D","E")
+rownames(OutEr) <- c("A","B","C","D","E")
+OutEr <- as.table(OutEr)
+require(pander)
+pandoc.table(OutEr)
+```
+  
+Therefore the out of sample error rate is: (2+1+3+2+2)/5763 = 1.74%.  
+The accuracy rate for prediction is: 1-1.74% = 99.83%.
+  
+  
+### Conclusion  
+  
+__We built a random forest model to predict exercise class based on measured accelerometer value. The model achieves 100% accurate prediction in in-sample prediction and 99.83% accurate prediction in out-of-sample prediction. __  
+  
+    
+      
+      
+
